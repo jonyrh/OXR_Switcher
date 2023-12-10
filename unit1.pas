@@ -38,7 +38,7 @@ type
   end;
 
 const
-  version     = '2023.12.09.20.00';
+  version     = '2023.12.10.09.30';
 
   icon_oculus = 0;
   icon_steam  = 1;
@@ -73,7 +73,7 @@ var
   aSL: TStringList;
   jsonData: TJSONData;
 begin
- Result:='';
+ Result:= aFile;
 
  if not FileExists(aFile) then Exit;
 
@@ -134,14 +134,14 @@ begin
     OXR_List[Length(OXR_List)-1].oi_name:= GetRuntimeNameFromJSON(OXR_List[Length(OXR_List)-1].oi_json);
 
     OXR_List[Length(OXR_List)-1].oi_icon:= -1;
-    if UTF8Pos('steam', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:= icon_steam;
-    if UTF8Pos('oculus', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:= icon_oculus;
-    if (UTF8Pos('virtual', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) and
-       (UTF8Pos('desktop', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vd;
-    if (UTF8Pos('mixed', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) and
-       (UTF8Pos('reality', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_wmr;
-    if UTF8Pos('vive', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vive;
-    if UTF8Pos('varjo', UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:= icon_varjo;
+    if UTF8Pos( 'steam',    UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_steam;
+    if UTF8Pos( 'oculus',   UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_oculus;
+    if (UTF8Pos('virtual',  UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) and
+       (UTF8Pos('desktop',  UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vd;
+    if (UTF8Pos('mixed',    UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) and
+       (UTF8Pos('reality',  UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_wmr;
+    if UTF8Pos( 'vive',     UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_vive;
+    if UTF8Pos( 'varjo',    UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_varjo;
     end;
 
    finally
