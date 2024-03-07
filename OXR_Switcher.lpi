@@ -18,6 +18,15 @@
       </XPManifest>
       <Icon Value="0"/>
     </General>
+    <VersionInfo>
+      <UseVersionInfo Value="True"/>
+      <MajorVersionNr Value="2024"/>
+      <MinorVersionNr Value="3"/>
+      <RevisionNr Value="7"/>
+      <BuildNr Value="19"/>
+      <Language Value="0419"/>
+      <StringTable Comments="http://www.jonyrh.ru" FileDescription="OpenXR Active Runtime Switcher" LegalCopyright="(c) Jony Rh, 2024" OriginalFilename="OXR_Switcher.exe" ProductName="OXR_Switcher"/>
+    </VersionInfo>
     <BuildModes>
       <Item Name="Default" Default="True"/>
     </BuildModes>

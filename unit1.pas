@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComboEx, StdCtrls, LazUTF8, lclintf, Registry, Windows,
-  fpJSON, JSONParser, JSONScanner,
+  fpJSON, JSONParser, JSONScanner, StrUtils,
   uDarkStyleParams, uWin32WidgetSetDark, uDarkStyleSchemes, uMetaDarkStyle;
 
 type
@@ -38,14 +38,13 @@ type
   end;
 
 const
-  version     = '2023.12.10.09.30';
-
   icon_oculus = 0;
   icon_steam  = 1;
   icon_vd     = 2;
   icon_wmr    = 3;
   icon_vive   = 4;
   icon_varjo  = 5;
+  icon_meta   = 6;
 
 var
   Form1: TForm1;
@@ -68,23 +67,61 @@ begin
   end;
 end;
 
-function GetRuntimeNameFromJSON(const aFile: String): String;
+procedure AddParseRuntimeFromJSON(const aRuntimeJsonFile, aActiveRuntime: String);
 var
   aSL: TStringList;
   jsonData: TJSONData;
+  aName,
+  aDll: String;
 begin
- Result:= aFile;
-
- if not FileExists(aFile) then Exit;
+ if (aRuntimeJsonFile.IsEmpty) or
+    (not FileExists(aRuntimeJsonFile)) then Exit;
 
  aSL:= TStringList.Create;
 
  try
-  aSL.LoadFromFile(aFile);
+  aSL.LoadFromFile(aRuntimeJsonFile);
+
   jsonData:= GetJSON(aSL.Text, True);
-  Result:= jsonData.FindPath('runtime.name').AsString;
+  aName:= Trim(jsonData.FindPath('runtime.name').AsString);
+  aDll:=  Trim(jsonData.FindPath('runtime.library_path').AsString);
+
+  if aName.IsEmpty then aName:= aRuntimeJsonFile;
+
+  aDll:= UTF8StringReplace(aDll, '/', DirectorySeparator, [rfReplaceAll]).Trim;
+
+  if UTF8Copy(aDll, 1, 2)=('.'+DirectorySeparator)
+   then aDll:= UTF8Copy(aDll, 3, UTF8Length(aDll)).Trim;
+
+  if not FileExists(aDll) then aDll:= ExtractFilePath(aRuntimeJsonFile) + aDll;
+
+  if FileExists(aDll) then
+   begin
+   SetLength(OXR_List, Length(OXR_List)+1);
+
+   OXR_List[Length(OXR_List)-1].oi_name:= aName;
+   OXR_List[Length(OXR_List)-1].oi_json:= aRuntimeJsonFile;
+
+   if aActiveRuntime= UTF8LowerCase(aRuntimeJsonFile)
+    then OXR_List[Length(OXR_List)-1].oi_active:= True
+      else OXR_List[Length(OXR_List)-1].oi_active:= False;
+
+   aName:= UTF8LowerCase(aName);
+
+        if ContainsText( aName, 'oculus' )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_oculus
+   else if ContainsText( aName, 'meta'   )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_meta
+   else if ContainsText( aName, 'steam'  )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_steam
+   else if (ContainsText(aName, 'virtual')) and
+           (ContainsText(aName, 'desktop')) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vd
+   else if (ContainsText(aName, 'mixed'  )) and
+           (ContainsText(aName, 'reality')) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_wmr
+   else if ContainsText( aName, 'vive'   )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vive
+   else if ContainsText( aName, 'varjo'  )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_varjo
+   else OXR_List[Length(OXR_List)-1].oi_icon:= -1;
+   end;
+
  finally
-  jsonData.Free;
+  if jsonData<>nil then jsonData.Free;
   aSL.Free;
  end;
 end;
@@ -96,16 +133,14 @@ var
  Registry: TRegistry;
  i: Integer;
  aSL: TStringList;
- aActive: String;
+ aActiveRuntime: String;
 begin
- Label3.Caption:= version;
-
  ComboBoxEx1.ItemsEx.Clear;
 
  OXR_List:= nil;
  SetLength(OXR_List, 0);
 
- aActive:= 'none';
+ aActiveRuntime:= 'none';
 
  aSL:= TStringList.Create;
  aSL.Clear;
@@ -115,39 +150,36 @@ begin
   try
    Registry.RootKey:= HKEY_LOCAL_MACHINE;
 
-   if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1') then aActive:= Registry.ReadString('ActiveRuntime');
-
+   if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1') then aActiveRuntime:= UTF8LowerCase(Registry.ReadString('ActiveRuntime')).Trim;
    Registry.CloseKey;
 
    if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1\AvailableRuntimes') then Registry.GetValueNames(aSL);
-
    Registry.CloseKey;
 
    for i:=0 to aSL.Count-1 do
-    begin
-    SetLength(OXR_List, Length(OXR_List)+1);
-
-    OXR_List[Length(OXR_List)-1].oi_active:= False;
-    if UTF8LowerCase(aSL[i])= UTF8LowerCase(aActive) then OXR_List[Length(OXR_List)-1].oi_active:= True;
-
-    OXR_List[Length(OXR_List)-1].oi_json:= aSL[i];
-    OXR_List[Length(OXR_List)-1].oi_name:= GetRuntimeNameFromJSON(OXR_List[Length(OXR_List)-1].oi_json);
-
-    OXR_List[Length(OXR_List)-1].oi_icon:= -1;
-    if UTF8Pos( 'steam',    UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_steam;
-    if UTF8Pos( 'oculus',   UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_oculus;
-    if (UTF8Pos('virtual',  UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) and
-       (UTF8Pos('desktop',  UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vd;
-    if (UTF8Pos('mixed',    UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) and
-       (UTF8Pos('reality',  UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0) then OXR_List[Length(OXR_List)-1].oi_icon:= icon_wmr;
-    if UTF8Pos( 'vive',     UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_vive;
-    if UTF8Pos( 'varjo',    UTF8LowerCase(OXR_List[Length(OXR_List)-1].oi_name))<>0 then OXR_List[Length(OXR_List)-1].oi_icon:=  icon_varjo;
-    end;
+    AddParseRuntimeFromJSON(aSL[i].Trim, aActiveRuntime);
 
    finally
     Registry.Free;
     aSL.Free;
    end;
+
+  // test icons
+ { SetLength(OXR_List, 7);
+   OXR_List[0].oi_name:='Oculus OpenXR';
+   OXR_List[0].oi_icon:= icon_oculus;
+   OXR_List[1].oi_name:='Meta OpenXR';
+   OXR_List[1].oi_icon:= icon_meta;
+   OXR_List[2].oi_name:='SteamVR';
+   OXR_List[2].oi_icon:= icon_steam;
+   OXR_List[3].oi_name:='VirtualDesktopXR (Bundled)';
+   OXR_List[3].oi_icon:= icon_vd;
+   OXR_List[4].oi_name:='Windows Mixed Reality';
+   OXR_List[4].oi_icon:= icon_wmr;
+   OXR_List[5].oi_name:='Vive Runtime';
+   OXR_List[5].oi_icon:= icon_vive;
+   OXR_List[6].oi_name:='Varjo OpenXR';
+   OXR_List[6].oi_icon:= icon_varjo; }
 
   for i:=0 to Length(OXR_List)-1 do
    begin
@@ -161,14 +193,11 @@ var
  Registry: TRegistry;
 begin
  Registry:= TRegistry.Create;
-
   try
    Registry.RootKey:= HKEY_LOCAL_MACHINE;
-
-   if Registry.OpenKey('Software\Khronos\OpenXR\1', False) then Registry.WriteString('ActiveRuntime', OXR_List[ComboBoxEx1.ItemIndex].oi_json);
-
+   if Registry.OpenKey('Software\Khronos\OpenXR\1', False) then
+    Registry.WriteString('ActiveRuntime', OXR_List[ComboBoxEx1.ItemIndex].oi_json);
    Registry.CloseKey;
-
   finally
    Registry.Free;
   end;
