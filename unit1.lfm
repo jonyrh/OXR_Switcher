@@ -50,12 +50,12 @@ object Form1: TForm1
     Height = 15
     Top = 56
     Width = 84
-    Caption = '2024.03.07.19.00'
+    Caption = '2024.03.08.10.00'
     ParentColor = False
   end
   object ImageList1: TImageList
-    Left = 96
-    Top = 24
+    Left = 120
+    Top = 8
     Bitmap = {
       4C7A0700000010000000100000003B0B00000000000078DADD98095453D71686
       0F248021038424CCE050A41504ABD58A0302CF79404BB5B488552C5AB52EA9C3

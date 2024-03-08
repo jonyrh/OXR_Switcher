@@ -196,7 +196,7 @@ begin
   try
    Registry.RootKey:= HKEY_LOCAL_MACHINE;
    if Registry.OpenKey('Software\Khronos\OpenXR\1', False) then
-    Registry.WriteString('ActiveRuntime', OXR_List[ComboBoxEx1.ItemIndex].oi_json);
+    Registry.WriteExpandString('ActiveRuntime', OXR_List[ComboBoxEx1.ItemIndex].oi_json);
    Registry.CloseKey;
   finally
    Registry.Free;
