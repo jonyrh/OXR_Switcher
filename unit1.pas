@@ -2,12 +2,18 @@ unit Unit1;
 
 {$mode objfpc}{$H+}
 
+{$DEFINE ALLOW_DARK}
+//{$DEFINE TEST_MODE}
+
 interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComboEx, StdCtrls, LazUTF8, lclintf, Registry, Windows,
-  fpJSON, JSONParser, JSONScanner, StrUtils,
-  uDarkStyleParams, uWin32WidgetSetDark, uDarkStyleSchemes, uMetaDarkStyle;
+  fpJSON, JSONParser, JSONScanner, StrUtils
+  {$IFDEF ALLOW_DARK}
+  ,uDarkStyleParams, uWin32WidgetSetDark, uDarkStyleSchemes, uMetaDarkStyle
+  {$ENDIF}
+  ;
 
 type
 
@@ -55,6 +61,7 @@ implementation
 
 {$R *.lfm}
 
+{$IFDEF ALLOW_DARK}
 procedure SetDarkStyle;
 begin
  try
@@ -66,6 +73,7 @@ begin
   except
   end;
 end;
+{$ENDIF}
 
 procedure AddParseRuntimeFromJSON(const aRuntimeJsonFile, aActiveRuntime: String);
 var
@@ -164,8 +172,9 @@ begin
     aSL.Free;
    end;
 
-  // test icons
- { SetLength(OXR_List, 7);
+   // test icons
+   {$IFDEF TEST_MODE}
+   SetLength(OXR_List, 7);
    OXR_List[0].oi_name:='Oculus OpenXR';
    OXR_List[0].oi_icon:= icon_oculus;
    OXR_List[1].oi_name:='Meta OpenXR';
@@ -179,7 +188,8 @@ begin
    OXR_List[5].oi_name:='Vive Runtime';
    OXR_List[5].oi_icon:= icon_vive;
    OXR_List[6].oi_name:='Varjo OpenXR';
-   OXR_List[6].oi_icon:= icon_varjo; }
+   OXR_List[6].oi_icon:= icon_varjo;
+   {$ENDIF}
 
   for i:=0 to Length(OXR_List)-1 do
    begin
@@ -189,6 +199,7 @@ begin
 end;
 
 procedure TForm1.ComboBoxEx1Change(Sender: TObject);
+{$IFNDEF TEST_MODE}
 var
  Registry: TRegistry;
 begin
@@ -201,6 +212,9 @@ begin
   finally
    Registry.Free;
   end;
+{$ELSE}
+begin
+{$ENDIF}
 end;
 
 procedure TForm1.Label2Click(Sender: TObject);
@@ -208,9 +222,11 @@ begin
   OpenURL('http://www.jonyrh.ru');
 end;
 
+{$IFDEF ALLOW_DARK}
 initialization
 
 SetDarkStyle;
+{$ENDIF}
 
 end.
 
