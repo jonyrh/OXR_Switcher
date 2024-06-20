@@ -32,11 +32,10 @@ type
     ComboBoxEx1: TComboBoxEx;
     ImageList1: TImageList;
     Label1: TLabel;
-    Label2: TLabel;
-    Label3: TLabel;
     procedure ComboBoxEx1Change(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure Label2Click(Sender: TObject);
+    procedure WMSysCommand(var Msg: TWMSysCommand); message WM_SYSCOMMAND;
   private
 
   public
@@ -44,6 +43,10 @@ type
   end;
 
 const
+  app_version = 'OXR_Switcher v.2024.06.20.15';
+  app_copy    = '(c) Jony Rh, 2024';
+  app_url     = 'http://www.jonyrh.ru';
+
   icon_oculus = 0;
   icon_steam  = 1;
   icon_vd     = 2;
@@ -51,6 +54,8 @@ const
   icon_vive   = 4;
   icon_varjo  = 5;
   icon_meta   = 6;
+
+  SC_MyMenuItem = WM_USER + 1;
 
 var
   Form1: TForm1;
@@ -60,6 +65,13 @@ var
 implementation
 
 {$R *.lfm}
+
+procedure TForm1.WMSysCommand(var Msg: TWMSysCommand);
+begin
+  if Msg.CmdType = SC_MyMenuItem then OpenURL(app_url)
+  else
+    inherited;
+end;
 
 {$IFDEF ALLOW_DARK}
 procedure SetDarkStyle;
@@ -143,6 +155,11 @@ var
  aSL: TStringList;
  aActiveRuntime: String;
 begin
+ AppendMenu(GetSystemMenu(Handle, FALSE), MF_SEPARATOR, 0, '');
+ AppendMenu(GetSystemMenu(Handle, FALSE), MF_STRING, SC_MyMenuItem, app_version);
+ AppendMenu(GetSystemMenu(Handle, FALSE), MF_STRING, SC_MyMenuItem, app_copy);
+ AppendMenu(GetSystemMenu(Handle, FALSE), MF_STRING, SC_MyMenuItem, app_url);
+
  ComboBoxEx1.ItemsEx.Clear;
 
  OXR_List:= nil;
