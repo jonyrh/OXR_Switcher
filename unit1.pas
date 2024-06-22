@@ -34,7 +34,7 @@ type
     Label1: TLabel;
     procedure ComboBoxEx1Change(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure Label2Click(Sender: TObject);
+    procedure SetActiveOpenXR(const idXR: Integer);
     procedure WMSysCommand(var Msg: TWMSysCommand); message WM_SYSCOMMAND;
   private
 
@@ -43,7 +43,7 @@ type
   end;
 
 const
-  app_version = 'OXR_Switcher v.2024.06.20.15';
+  app_version = 'OXR_Switcher v.2024.06.22.19';
   app_copy    = '(c) Jony Rh, 2024';
   app_url     = 'http://www.jonyrh.ru';
 
@@ -59,6 +59,9 @@ const
 
 var
   Form1: TForm1;
+
+  mode: DWORD = 0;
+  hOut: HANDLE;
 
   OXR_List: TAvailableRuntimes;
 
@@ -138,6 +141,7 @@ begin
    else if ContainsText( aName, 'vive'   )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_vive
    else if ContainsText( aName, 'varjo'  )  then OXR_List[Length(OXR_List)-1].oi_icon:= icon_varjo
    else OXR_List[Length(OXR_List)-1].oi_icon:= -1;
+
    end;
 
  finally
@@ -151,7 +155,7 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 var
  Registry: TRegistry;
- i: Integer;
+ i, j: Integer;
  aSL: TStringList;
  aActiveRuntime: String;
 begin
@@ -213,9 +217,55 @@ begin
    ComboBoxEx1.ItemsEx.AddItem(OXR_List[i].oi_name, OXR_List[i].oi_icon);
    if OXR_List[i].oi_active then ComboBoxEx1.ItemIndex:=i;
    end;
+
+  // command line params
+
+  if ParamCount=0 then Exit;
+
+  AllocConsole;
+  IsConsole := True;
+  SysInitStdIO;
+
+  i:= StrToIntDef(ParamStr(1).Trim, -1);
+
+  if (i>=0) and
+     (i<=Length(OXR_List)-1) then
+   begin
+    SetActiveOpenXR(i);
+   end
+    else
+     begin
+      WriteLn(app_version);
+      WriteLn(app_copy);
+      WriteLn(app_url);
+      WriteLn;
+
+      if Length(OXR_List)<>0 then
+       begin
+        WriteLn('Available OpenXR indexes:');
+
+        for i:=0 to Length(OXR_List)-1 do
+         begin
+          if OXR_List[i].oi_active then  WriteLn(i.ToString + ' : ' + OXR_List[i].oi_name + ' [ACTIVE]')
+                                   else  WriteLn(i.ToString + ' : ' + OXR_List[i].oi_name);
+         end;
+       end
+        else WriteLn('Available OpenXR not found!');
+
+      WriteLn;
+      WriteLn('Usage: To set active OpenXR use available index as param');
+      WriteLn;
+      WriteLn('Example:');
+      WriteLn(ParamStr(0) + ' 1');
+      WriteLn;
+      WriteLn('Press Return to Exit');
+      ReadLn;
+     end;
+
+  Halt(0);
 end;
 
-procedure TForm1.ComboBoxEx1Change(Sender: TObject);
+procedure TForm1.SetActiveOpenXR(const idXR: Integer);
 {$IFNDEF TEST_MODE}
 var
  Registry: TRegistry;
@@ -224,7 +274,7 @@ begin
   try
    Registry.RootKey:= HKEY_LOCAL_MACHINE;
    if Registry.OpenKey('Software\Khronos\OpenXR\1', False) then
-    Registry.WriteExpandString('ActiveRuntime', OXR_List[ComboBoxEx1.ItemIndex].oi_json);
+    Registry.WriteExpandString('ActiveRuntime', OXR_List[idXR].oi_json);
    Registry.CloseKey;
   finally
    Registry.Free;
@@ -234,10 +284,11 @@ begin
 {$ENDIF}
 end;
 
-procedure TForm1.Label2Click(Sender: TObject);
+procedure TForm1.ComboBoxEx1Change(Sender: TObject);
 begin
-  OpenURL('http://www.jonyrh.ru');
+ SetActiveOpenXR(ComboBoxEx1.ItemIndex);
 end;
+
 
 {$IFDEF ALLOW_DARK}
 initialization
