@@ -20,15 +20,15 @@
     </General>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MajorVersionNr Value="2024"/>
-      <MinorVersionNr Value="6"/>
-      <RevisionNr Value="22"/>
-      <BuildNr Value="19"/>
+      <MajorVersionNr Value="2025"/>
+      <MinorVersionNr Value="11"/>
+      <RevisionNr Value="20"/>
+      <BuildNr Value="13"/>
       <Language Value="0419"/>
-      <StringTable Comments="http://www.jonyrh.ru" FileDescription="OpenXR Active Runtime Switcher" LegalCopyright="(c) Jony Rh, 2024" OriginalFilename="OXR_Switcher.exe" ProductName="OXR_Switcher"/>
+      <StringTable Comments="http://www.jonyrh.ru" FileDescription="OpenXR Active Runtime Switcher" LegalCopyright="(c) Jony Rh, 2025" OriginalFilename="OXR_Switcher.exe" ProductName="OXR_Switcher"/>
     </VersionInfo>
     <BuildModes>
-      <Item Name="Default" Default="True"/>
+      <Item Name="Win64" Default="True"/>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -64,7 +64,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="OXR_Switcher"/>
+      <Filename Value="bin\$(TargetCPU)-$(TargetOS)\OXR_Switcher"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
@@ -72,6 +72,8 @@
     </SearchPaths>
     <CodeGeneration>
       <SmartLinkUnit Value="True"/>
+      <TargetCPU Value="x86_64"/>
+      <TargetOS Value="win64"/>
     </CodeGeneration>
     <Linking>
       <Debugging>
