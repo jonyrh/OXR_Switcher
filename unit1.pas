@@ -48,8 +48,8 @@ type
   end;
 
 const
-  app_version = 'OXR_Switcher v.2025.11.20.13';
-  app_copy    = '(c) Jony Rh, 2025';
+  app_version = 'OXR_Switcher v.2026.05.12.12';
+  app_copy    = '(c) Jony Rh, 2026';
   app_url     = 'http://www.jonyrh.ru';
 
   icon_oculus = 0;
@@ -156,14 +156,28 @@ begin
  if (aRuntimeJsonFile.IsEmpty) or
     (not FileExists(aRuntimeJsonFile)) then Exit;
 
+ aName:='';
+ aDll:='';
+
  aSL:= TStringList.Create;
 
- try
-  aSL.LoadFromFile(aRuntimeJsonFile);
+  try
+   try
+    aSL.LoadFromFile(aRuntimeJsonFile);
+    jsonData:= GetJSON(aSL.Text, True);
+    aName:= Trim(jsonData.FindPath('runtime.name').AsString);
+    aDll:=  Trim(jsonData.FindPath('runtime.library_path').AsString);
+   except
+    aName:='';
+    aDll:='';
+    aSL.Clear;
+   end;
+  finally
+   if jsonData<>nil then jsonData.Free;
+   aSL.Free;
+  end;
 
-  jsonData:= GetJSON(aSL.Text, True);
-  aName:= Trim(jsonData.FindPath('runtime.name').AsString);
-  aDll:=  Trim(jsonData.FindPath('runtime.library_path').AsString);
+  if (aName.IsEmpty) and (aDll.IsEmpty) then Exit;
 
   if aName.IsEmpty then aName:= aRuntimeJsonFile;
 
@@ -220,11 +234,6 @@ begin
                   else OXR_List[i].oi_json32:= aRuntimeJsonFile;
        end;
    end;
-
- finally
-  if jsonData<>nil then jsonData.Free;
-  aSL.Free;
- end;
 end;
 
 { TForm1 }

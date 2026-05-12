@@ -20,12 +20,12 @@
     </General>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MajorVersionNr Value="2025"/>
-      <MinorVersionNr Value="11"/>
-      <RevisionNr Value="20"/>
-      <BuildNr Value="13"/>
+      <MajorVersionNr Value="2026"/>
+      <MinorVersionNr Value="5"/>
+      <RevisionNr Value="12"/>
+      <BuildNr Value="12"/>
       <Language Value="0419"/>
-      <StringTable Comments="http://www.jonyrh.ru" FileDescription="OpenXR Active Runtime Switcher" LegalCopyright="(c) Jony Rh, 2025" OriginalFilename="OXR_Switcher.exe" ProductName="OXR_Switcher"/>
+      <StringTable Comments="http://www.jonyrh.ru" FileDescription="OpenXR Active Runtime Switcher" LegalCopyright="(c) Jony Rh, 2026" OriginalFilename="OXR_Switcher.exe" ProductName="OXR_Switcher"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Win64" Default="True"/>
