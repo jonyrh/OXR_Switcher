@@ -2,22 +2,12 @@ unit Unit1;
 
 {$mode objfpc}{$H+}
 
-{$DEFINE ALLOW_DARK}
-//{$DEFINE TEST_ICONS}
-//{$DEFINE TEST_LIST}
-
 interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComboEx, StdCtrls, LazUTF8, lclintf, Registry, Windows,
-  fpJSON, JSONParser, JSONScanner, StrUtils
-  {$IFDEF TEST_LIST}
-  ,IniFiles
-  {$ENDIF}
-  {$IFDEF ALLOW_DARK}
-  ,uDarkStyleParams, uWin32WidgetSetDark, uDarkStyleSchemes, uMetaDarkStyle
-  {$ENDIF}
-  ;
+  fpJSON, JSONParser, JSONScanner, StrUtils, IniFiles,
+  uDarkStyleParams, uWin32WidgetSetDark, uDarkStyleSchemes, uMetaDarkStyle;
 
 type
 
@@ -25,6 +15,8 @@ type
     oi_active: Boolean;
     oi_json32,
     oi_json64,
+    oi_dll32,
+    oi_dll64,
     oi_name: String;
     oi_icon: Integer;
   end;
@@ -39,7 +31,6 @@ type
     Label1: TLabel;
     procedure ComboBoxEx1Change(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure SetActiveOpenXR(const idXR: Integer);
     procedure WMSysCommand(var Msg: TWMSysCommand); message WM_SYSCOMMAND;
   private
 
@@ -48,7 +39,7 @@ type
   end;
 
 const
-  app_version = 'OXR_Switcher v.2026.05.12.12';
+  app_version = 'OXR_Switcher v.2026.05.13.13';
   app_copy    = '(c) Jony Rh, 2026';
   app_url     = 'http://www.jonyrh.ru';
 
@@ -73,6 +64,15 @@ var
 
   OXR_List: TAvailableRuntimes;
 
+  aDemo: Boolean;
+
+procedure AddParseRuntimeFromJSON(const aRuntimeJsonFile, aActiveRuntime: String; a64bit: Boolean);
+procedure GetDemoRuntimes;
+procedure GetRuntimes;
+procedure SaveDebugToIniFile;
+procedure SetActiveOpenXR(const idXR: Integer);
+procedure SortArrayRuntimesAndSetBits;
+
 implementation
 
 {$R *.lfm}
@@ -84,7 +84,6 @@ begin
     inherited;
 end;
 
-{$IFDEF ALLOW_DARK}
 procedure SetDarkStyle;
 begin
  try
@@ -96,7 +95,64 @@ begin
   except
   end;
 end;
-{$ENDIF}
+
+procedure GetDemoRuntimes;
+begin
+ SetLength(OXR_List, 10);
+
+ OXR_List[0].oi_name:='Oculus OpenXR (x32/x64)';
+ OXR_List[0].oi_icon:= icon_oculus;
+ OXR_List[1].oi_name:='SteamVR (x64)';
+ OXR_List[1].oi_icon:= icon_steam;
+ OXR_List[1].oi_active:= True;
+ OXR_List[2].oi_name:='VirtualDesktopXR (Bundled) (x32/x64)';
+ OXR_List[2].oi_icon:= icon_vd;
+ OXR_List[3].oi_name:='Windows Mixed Reality (x32/x64)';
+ OXR_List[3].oi_icon:= icon_wmr;
+ OXR_List[4].oi_name:='Vive Runtime (x32/x64)';
+ OXR_List[4].oi_icon:= icon_vive;
+ OXR_List[5].oi_name:='Varjo OpenXR (x32/x64)';
+ OXR_List[5].oi_icon:= icon_varjo;
+ OXR_List[6].oi_name:='Meta OpenXR (x32/x64)';
+ OXR_List[6].oi_icon:= icon_meta;
+ OXR_List[7].oi_name:='Pimax XR (x64)';
+ OXR_List[7].oi_icon:= icon_pimax;
+ OXR_List[8].oi_name:='Monado XR Runtime (x64)';
+ OXR_List[8].oi_icon:= icon_monado;
+ OXR_List[9].oi_name:='Unknown OpenXR (x32)';
+ OXR_List[9].oi_icon:= icon_none;
+
+ SortArrayRuntimesAndSetBits;
+end;
+
+procedure SetActiveOpenXR(const idXR: Integer);
+var
+ Registry: TRegistry;
+begin
+ if aDemo then Exit;
+
+ // x64
+ Registry:= TRegistry.Create;
+  try
+   Registry.RootKey:= HKEY_LOCAL_MACHINE;
+   if Registry.OpenKey('Software\Khronos\OpenXR\1', False) then
+    Registry.WriteExpandString('ActiveRuntime', OXR_List[idXR].oi_json64);
+   Registry.CloseKey;
+  finally
+   Registry.Free;
+  end;
+
+ // x32
+ Registry:= TRegistry.Create; //(KEY_WRITE or KEY_WOW64_32KEY);
+  try
+   Registry.RootKey:= HKEY_LOCAL_MACHINE;
+   if Registry.OpenKey('Software\WOW6432Node\Khronos\OpenXR\1', False) then
+    Registry.WriteExpandString('ActiveRuntime', OXR_List[idXR].oi_json32);
+   Registry.CloseKey;
+  finally
+   Registry.Free;
+  end;
+end;
 
 procedure SortArrayRuntimesAndSetBits;
 var
@@ -130,18 +186,22 @@ begin
 
   aSL.Free;
 
-  {$IFNDEF TEST_ICONS}
-  for i:=0 to Length(tmp_List)-1 do
+  if not aDemo then
    begin
-         if (tmp_List[i].oi_json32.IsEmpty) and (not tmp_List[i].oi_json64.IsEmpty) then tmp_List[i].oi_name:= tmp_List[i].oi_name +     ' (x64)'
-    else if (not tmp_List[i].oi_json32.IsEmpty) and (tmp_List[i].oi_json64.IsEmpty) then tmp_List[i].oi_name:= tmp_List[i].oi_name +     ' (x32)'
-    else if (not tmp_List[i].oi_json32.IsEmpty) and (not tmp_List[i].oi_json64.IsEmpty) then tmp_List[i].oi_name:= tmp_List[i].oi_name + ' (x32/x64)';
+    for i:=0 to Length(tmp_List)-1 do
+     begin
+           if (tmp_List[i].oi_json32.IsEmpty) and (not tmp_List[i].oi_json64.IsEmpty) then tmp_List[i].oi_name:= tmp_List[i].oi_name +     ' (x64)'
+      else if (not tmp_List[i].oi_json32.IsEmpty) and (tmp_List[i].oi_json64.IsEmpty) then tmp_List[i].oi_name:= tmp_List[i].oi_name +     ' (x32)'
+      else if (not tmp_List[i].oi_json32.IsEmpty) and (not tmp_List[i].oi_json64.IsEmpty) then tmp_List[i].oi_name:= tmp_List[i].oi_name + ' (x32/x64)';
+     end;
    end;
-  {$ENDIF}
 
   SetLength(OXR_List, 0);
   OXR_List:= Copy(tmp_List);
   SetLength(tmp_List, 0);
+
+  for i:=0 to Length(OXR_List)-1 do
+    OXR_List[i].oi_name:= i.ToString + ' - ' + OXR_List[i].oi_name;
 end;
 
 procedure AddParseRuntimeFromJSON(const aRuntimeJsonFile, aActiveRuntime: String; a64bit: Boolean);
@@ -181,6 +241,9 @@ begin
 
   if aName.IsEmpty then aName:= aRuntimeJsonFile;
 
+  aName:= UTF8StringReplace(aName, '[', '(', [rfReplaceAll]).Trim;
+  aName:= UTF8StringReplace(aName, ']', ')', [rfReplaceAll]).Trim;
+
   aDll:= UTF8StringReplace(aDll, '/', DirectorySeparator, [rfReplaceAll]).Trim;
 
   if UTF8Copy(aDll, 1, 2)=('.'+DirectorySeparator)
@@ -211,6 +274,12 @@ begin
       if a64bit then OXR_List[Length(OXR_List)-1].oi_json64:= aRuntimeJsonFile
                 else OXR_List[Length(OXR_List)-1].oi_json32:= aRuntimeJsonFile;
 
+      OXR_List[Length(OXR_List)-1].oi_dll64:='';
+      OXR_List[Length(OXR_List)-1].oi_dll32:='';
+
+      if a64bit then OXR_List[Length(OXR_List)-1].oi_dll64:= aDll
+                else OXR_List[Length(OXR_List)-1].oi_dll32:= aDll;
+
       if aActiveRuntime= aRuntimeJsonFile then OXR_List[Length(OXR_List)-1].oi_active:= True;
 
       aName:= UTF8LowerCase(aName);
@@ -230,23 +299,124 @@ begin
      end
       else
        begin
-        if a64bit then OXR_List[i].oi_json64:= aRuntimeJsonFile
-                  else OXR_List[i].oi_json32:= aRuntimeJsonFile;
+        if a64bit then
+         begin
+          OXR_List[i].oi_json64:= aRuntimeJsonFile;
+          OXR_List[i].oi_dll64:= aDll;
+         end
+           else
+            begin
+             OXR_List[i].oi_json32:= aRuntimeJsonFile;
+             OXR_List[i].oi_dll32:= aDll;
+            end;
        end;
    end;
+end;
+
+procedure SaveDebugToIniFile;
+var
+ ini: TIniFile;
+ i: Integer;
+ fn: String;
+begin
+ fn:= ChangeFileExt(ParamStr(0), '.ini');
+
+ try
+  if FileExists(fn) then SysUtils.DeleteFile(fn);
+ except
+ end;
+
+ try
+  try
+   ini:= TIniFile.Create(fn);
+   for i:=0 to Length(OXR_List)-1 do
+    begin
+     ini.WriteInteger(OXR_List[i].oi_name, 'active', OXR_List[i].oi_active.ToInteger);
+     ini.WriteInteger(OXR_List[i].oi_name, 'icon',   OXR_List[i].oi_icon);
+     ini.WriteString( OXR_List[i].oi_name, 'dll32',  OXR_List[i].oi_dll32);
+     ini.WriteString( OXR_List[i].oi_name, 'dll64',  OXR_List[i].oi_dll64);
+     ini.WriteString( OXR_List[i].oi_name, 'json32', OXR_List[i].oi_json32);
+     ini.WriteString( OXR_List[i].oi_name, 'json64', OXR_List[i].oi_json64);
+    end;
+  except
+  end;
+ finally
+  ini.Free;
+ end;
+end;
+
+procedure GetRuntimes;
+var
+ Registry: TRegistry;
+ i: Integer;
+ aSL: TStringList;
+ aActiveRuntime: String;
+begin
+ aSL:= TStringList.Create;
+ aSL.Clear;
+
+ // x64
+ aActiveRuntime:= 'none';
+
+ Registry:= TRegistry.Create;
+  try
+    try
+     Registry.RootKey:= HKEY_LOCAL_MACHINE;
+
+     if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1') then aActiveRuntime:= Registry.ReadString('ActiveRuntime').Trim;
+     Registry.CloseKey;
+
+     if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1\AvailableRuntimes') then Registry.GetValueNames(aSL);
+     Registry.CloseKey;
+    except
+    end;
+
+   if aActiveRuntime<>'none' then aSL.Add(aActiveRuntime.Trim);
+
+   for i:=0 to aSL.Count-1 do
+    AddParseRuntimeFromJSON(aSL[i].Trim, aActiveRuntime, True);
+
+  finally
+   Registry.Free;
+  end;
+
+ aSL.Clear;
+
+ // x32
+ aActiveRuntime:= 'none';
+
+ Registry:= TRegistry.Create;
+  try
+   try
+    Registry.RootKey:= HKEY_LOCAL_MACHINE;
+
+    if Registry.OpenKeyReadOnly('Software\WOW6432Node\Khronos\OpenXR\1') then aActiveRuntime:= Registry.ReadString('ActiveRuntime').Trim;
+    Registry.CloseKey;
+
+    if Registry.OpenKeyReadOnly('Software\WOW6432Node\Khronos\OpenXR\1\AvailableRuntimes') then Registry.GetValueNames(aSL);
+    Registry.CloseKey;
+   except
+   end;
+
+   if aActiveRuntime<>'none' then aSL.Add(aActiveRuntime.Trim);
+
+   for i:=0 to aSL.Count-1 do
+    AddParseRuntimeFromJSON(aSL[i].Trim, aActiveRuntime, False);
+
+  finally
+   Registry.Free;
+  end;
+
+ aSL.Free;
+
+ SortArrayRuntimesAndSetBits;
 end;
 
 { TForm1 }
 
 procedure TForm1.FormCreate(Sender: TObject);
 var
- Registry: TRegistry;
  i: Integer;
- aSL: TStringList;
- aActiveRuntime: String;
- {$IFDEF TEST_LIST}
- ini: TIniFile;
- {$ENDIF}
 begin
  AppendMenu(GetSystemMenu(Handle, FALSE), MF_SEPARATOR, 0, '');
  AppendMenu(GetSystemMenu(Handle, FALSE), MF_STRING, SC_MyMenuItem, app_version);
@@ -255,184 +425,19 @@ begin
 
  ComboBoxEx1.ItemsEx.Clear;
 
- OXR_List:= nil;
- SetLength(OXR_List, 0);
-
- aActiveRuntime:= 'none';
-
- aSL:= TStringList.Create;
- aSL.Clear;
-
- // x64
-
- Registry:= TRegistry.Create;
-  try
-   Registry.RootKey:= HKEY_LOCAL_MACHINE;
-
-   if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1') then aActiveRuntime:= Registry.ReadString('ActiveRuntime').Trim;
-   Registry.CloseKey;
-
-   if Registry.OpenKeyReadOnly('Software\Khronos\OpenXR\1\AvailableRuntimes') then Registry.GetValueNames(aSL);
-   Registry.CloseKey;
-
-   for i:=0 to aSL.Count-1 do
-    AddParseRuntimeFromJSON(aSL[i].Trim, aActiveRuntime, True);
-
-   finally
-    Registry.Free;
-   end;
-
- aSL.Clear;
-
- // x32
-
- Registry:= TRegistry.Create;
-  try
-   Registry.RootKey:= HKEY_LOCAL_MACHINE;
-
-   if Registry.OpenKeyReadOnly('Software\WOW6432Node\Khronos\OpenXR\1') then aActiveRuntime:= Registry.ReadString('ActiveRuntime').Trim;
-   Registry.CloseKey;
-
-   if Registry.OpenKeyReadOnly('Software\WOW6432Node\Khronos\OpenXR\1\AvailableRuntimes') then Registry.GetValueNames(aSL);
-   Registry.CloseKey;
-
-   for i:=0 to aSL.Count-1 do
-    AddParseRuntimeFromJSON(aSL[i].Trim, aActiveRuntime, False);
-
-   finally
-    Registry.Free;
-   end;
-
- aSL.Free;
-
- // test icons
- {$IFDEF TEST_ICONS}
- SetLength(OXR_List, 10);
- OXR_List[0].oi_name:='Oculus OpenXR (x32/x64)';
- OXR_List[0].oi_icon:= icon_oculus;
- OXR_List[1].oi_name:='SteamVR (x64)';
- OXR_List[1].oi_icon:= icon_steam;
- OXR_List[2].oi_name:='VirtualDesktopXR (Bundled) (x32/x64)';
- OXR_List[2].oi_icon:= icon_vd;
- OXR_List[3].oi_name:='Windows Mixed Reality (x32/x64)';
- OXR_List[3].oi_icon:= icon_wmr;
- OXR_List[4].oi_name:='Vive Runtime (x32/x64)';
- OXR_List[4].oi_icon:= icon_vive;
- OXR_List[5].oi_name:='Varjo OpenXR (x32/x64)';
- OXR_List[5].oi_icon:= icon_varjo;
- OXR_List[6].oi_name:='Meta OpenXR (x32/x64)';
- OXR_List[6].oi_icon:= icon_meta;
- OXR_List[7].oi_name:='Pimax XR (x64)';
- OXR_List[7].oi_icon:= icon_pimax;
- OXR_List[8].oi_name:='Monado XR Runtime (x64)';
- OXR_List[8].oi_icon:= icon_monado;
- OXR_List[9].oi_name:='Unknown OpenXR (x32)';
- OXR_List[9].oi_icon:= icon_none;
- {$ENDIF}
-
- SortArrayRuntimesAndSetBits;
- ComboBoxEx1.DropDownCount:= Length(OXR_List);
-
- {$IFDEF TEST_LIST}
- ini:= TIniFile.Create(ChangeFileExt(ParamStr(0), '.ini'));
- for i:=0 to Length(OXR_List)-1 do
+ if aDemo then
   begin
-   ini.WriteString( i.ToString, 'name',   OXR_List[i].oi_name);
-   ini.WriteInteger(i.ToString, 'active', OXR_List[i].oi_active.ToInteger);
-   ini.WriteInteger(i.ToString, 'icon',   OXR_List[i].oi_icon);
-   ini.WriteString( i.ToString, 'json32', OXR_List[i].oi_json32);
-   ini.WriteString( i.ToString, 'json64', OXR_List[i].oi_json64);
+   Application.Title:= Application.Title + ' - DEMO';
+   Form1.Caption:= Application.Title;
   end;
- ini.Free;
- {$ENDIF}
+
+ ComboBoxEx1.DropDownCount:= Length(OXR_List);
 
   for i:=0 to Length(OXR_List)-1 do
    begin
-   ComboBoxEx1.ItemsEx.AddItem(OXR_List[i].oi_name, OXR_List[i].oi_icon);
-   if OXR_List[i].oi_active then ComboBoxEx1.ItemIndex:=i;
+    ComboBoxEx1.ItemsEx.AddItem(OXR_List[i].oi_name, OXR_List[i].oi_icon);
+    if OXR_List[i].oi_active then ComboBoxEx1.ItemIndex:=i;
    end;
-
-  // command line params
-
-  if ParamCount=0 then Exit;
-
-  AllocConsole;
-  IsConsole := True;
-  SysInitStdIO;
-
-  i:= StrToIntDef(ParamStr(1).Trim, -1);
-
-  if (i>=0) and
-     (i<=Length(OXR_List)-1) then
-   begin
-    SetActiveOpenXR(i);
-   end
-    else
-     begin
-      WriteLn(app_version);
-      WriteLn(app_copy);
-      WriteLn(app_url);
-      WriteLn;
-      WriteLn('Show available OpenXR list: use any one parameter except numbers!');
-      WriteLn(ParamStr(0) + ' list');
-      WriteLn(ParamStr(0) + ' help');
-      WriteLn;
-
-      if Length(OXR_List)<>0 then
-       begin
-        WriteLn('Available OpenXR indexes:');
-
-        for i:=0 to Length(OXR_List)-1 do
-         begin
-          if OXR_List[i].oi_active then  WriteLn(i.ToString + ' : ' + OXR_List[i].oi_name + ' [ACTIVE]')
-                                   else  WriteLn(i.ToString + ' : ' + OXR_List[i].oi_name);
-         end;
-       end
-        else WriteLn('Available OpenXR not found!');
-
-      WriteLn;
-      WriteLn('Usage: To set active OpenXR use available index as param');
-      WriteLn;
-      WriteLn('Example:');
-      WriteLn(ParamStr(0) + ' 1');
-      WriteLn;
-      WriteLn('Press Return to Exit');
-      ReadLn;
-     end;
-
-  Halt(0);
-end;
-
-procedure TForm1.SetActiveOpenXR(const idXR: Integer);
-{$IFNDEF TEST_ICONS}
-var
- Registry: TRegistry;
-begin
-
- // x64
- Registry:= TRegistry.Create;
-  try
-   Registry.RootKey:= HKEY_LOCAL_MACHINE;
-   if Registry.OpenKey('Software\Khronos\OpenXR\1', False) then
-    Registry.WriteExpandString('ActiveRuntime', OXR_List[idXR].oi_json64);
-   Registry.CloseKey;
-  finally
-   Registry.Free;
-  end;
-
- // x32
- Registry:= TRegistry.Create; //(KEY_WRITE or KEY_WOW64_32KEY);
-  try
-   Registry.RootKey:= HKEY_LOCAL_MACHINE;
-   if Registry.OpenKey('Software\WOW6432Node\Khronos\OpenXR\1', False) then
-    Registry.WriteExpandString('ActiveRuntime', OXR_List[idXR].oi_json32);
-   Registry.CloseKey;
-  finally
-   Registry.Free;
-  end;
-{$ELSE}
-begin
-{$ENDIF}
 end;
 
 procedure TForm1.ComboBoxEx1Change(Sender: TObject);
@@ -440,12 +445,9 @@ begin
  SetActiveOpenXR(ComboBoxEx1.ItemIndex);
 end;
 
-
-{$IFDEF ALLOW_DARK}
 initialization
 
 SetDarkStyle;
-{$ENDIF}
 
 end.
 

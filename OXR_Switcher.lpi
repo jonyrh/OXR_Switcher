@@ -22,8 +22,8 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2026"/>
       <MinorVersionNr Value="5"/>
-      <RevisionNr Value="12"/>
-      <BuildNr Value="12"/>
+      <RevisionNr Value="13"/>
+      <BuildNr Value="13"/>
       <Language Value="0419"/>
       <StringTable Comments="http://www.jonyrh.ru" FileDescription="OpenXR Active Runtime Switcher" LegalCopyright="(c) Jony Rh, 2026" OriginalFilename="OXR_Switcher.exe" ProductName="OXR_Switcher"/>
     </VersionInfo>
