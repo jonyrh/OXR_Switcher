@@ -39,7 +39,7 @@ type
   end;
 
 const
-  app_version = 'OXR_Switcher v.2026.05.13.13';
+  app_version = 'OXR_Switcher v.2026.05.21.21';
   app_copy    = '(c) Jony Rh, 2026';
   app_url     = 'http://www.jonyrh.ru';
 
@@ -201,7 +201,7 @@ begin
   SetLength(tmp_List, 0);
 
   for i:=0 to Length(OXR_List)-1 do
-    OXR_List[i].oi_name:= i.ToString + ' - ' + OXR_List[i].oi_name;
+    OXR_List[i].oi_name:= (i+1).ToString + ' - ' + OXR_List[i].oi_name;
 end;
 
 procedure AddParseRuntimeFromJSON(const aRuntimeJsonFile, aActiveRuntime: String; a64bit: Boolean);

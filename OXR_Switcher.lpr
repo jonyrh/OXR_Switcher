@@ -50,19 +50,12 @@ begin
 
  if aDebug then SaveDebugToIniFile;
 
- if (n<>-1) and
+ if (n>=1) and
+    (n<=Length(OXR_List)) and
     (not aDemo) then
   begin
    HookParentConsole;
-
-   if (n<>-1) and
-      (n>=0) and
-      (n<=Length(OXR_List)-1) then
-    begin
-     SetActiveOpenXR(n);
-     Halt(0);
-    end;
-
+   SetActiveOpenXR(n-1);
    Halt(0);
   end
    else
